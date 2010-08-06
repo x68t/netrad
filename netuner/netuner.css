@@ -1,0 +1,20 @@
+.station {
+  padding: 0;
+  cursor: pointer;
+  clear: both;
+  font-size: small;
+}
+
+.station > .kbps {
+  padding: 8px 5px;
+  float: left;
+  width: 1.5em;
+  text-align: right;
+  color: white;
+  background-color: blue;
+}
+
+.station > .name {
+  padding: 8px 5px;
+  overflow: hidden;
+}

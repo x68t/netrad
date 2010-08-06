@@ -1,0 +1,62 @@
+[
+    {
+	genre: "Classic",
+	"icy-name": "Classical Wyoming-88.5 KUWY",
+	"display-name": "Classical Wyoming",
+	URL: "http://uwadmnweb.uwyo.edu/wpr/kuwy.m3u"
+    },
+    {
+	genre: "Classic",
+	"icy-name": "Radio Swiss Classic",
+	"display-name": "Radio Swiss",
+	URL: "http://www.radioswissclassic.ch/live/mp3.m3u"
+    },
+    {
+	genre: "Classic",
+	"icy-name": "S K Y . F M - Mostly Classical - Listen and Relax, it's good for you! www.sky.fm",
+	"display-name": "SKY.FM",
+	URL: "http://www.sky.fm/mp3/classical.pls"
+    },
+    {
+	genre: "Classic",
+	"icy-name": "All-Classical WGBH 89.7-HD2",
+	"display-name": "All-Classical WGBH",
+	URL: "http://streams.wgbh.org/classical.pls"
+    },
+    {
+	genre: "Jazz",
+	"icy-name": "Radio Swiss Jazz",
+	"display-name": "Radio Swiss",
+	URL: "http://www.radioswissjazz.ch/live/mp3.m3u"
+    },
+    {
+	genre: "Jazz",
+	"icy-name": "S K Y . F M - Absolutely Smooth Jazz - the world's smoothest jazz 24 hours a day",
+	"display-name": "SKY.FM",
+	URL: "http://www.sky.fm/mp3/smoothjazz.pls",
+    },
+    {
+	genre: "Pops",
+	"icy-name": "Radio Swiss Pop",
+	"display-name": "Radio Swiss",
+	URL: "http://www.radioswisspop.ch/live/mp3.m3u"
+    },
+    {
+	genre: "Pops",
+	"icy-name": "Magic Radio - La Webradio Des Annees 80 - 80's Hits Live From France",
+	"display-name": "Magic Radio",
+	URL: "http://www.magic-radio.net/ogg.m3u"
+    },
+    {
+	genre: "Anime",
+	"icy-name": "k a w a i i - r a d i o | sr1 http://kawaii-radio.net",
+	"display-name": "kawaii-radio",
+	URL: "http://kawaii-radio.net/listen.m3u"
+    },
+    {
+	genre: "Anime",
+	"icy-name": "AnimeNfo Radio  | Serving you the best Anime music!",
+	"display-name": "AnimeNfo Radio",
+	URL: "http://www.animenfo.com/radio/listen-192k.m3u"
+    },
+]

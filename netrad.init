@@ -1,0 +1,18 @@
+#!/sbin/runscript
+
+depend() {
+        need alsasound localmount
+        use net.lo netmount nfsmount esound pulseaudio
+}
+
+start() {
+    ebegin "Starting netrad"
+    env - /usr/local/sbin/netrad ${OPTIONS}
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping netrad"
+    kill `cat /var/run/netrad.pid`
+    eend $?
+}

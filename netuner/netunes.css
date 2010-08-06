@@ -1,0 +1,44 @@
+.station {
+  padding: 0;
+  cursor: pointer;
+  clear: both;
+  font-size: small;
+}
+
+.bandwidth {
+  padding: 8px 5px;
+  float: left;
+  width: 1.5em;
+  text-align: right;
+  color: white;
+  background-color: black;
+}
+
+.station > .name {
+  padding: 8px 5px;
+  overflow: hidden;
+}
+
+.quality-high {
+  background-color: blue;
+}
+
+.quality-middle {
+  background-color: orange;
+}
+
+.quality-low {
+  background-color: red;
+}
+
+#icy-name {
+  font-size: small;
+}
+
+li[selected="progress"] {
+    background-color: #194fdb !important;
+    color: #FFFFFF !important;
+    background-image: url(/iui/loading.gif), url(/iui/selection.png) !important;
+    background-position: right center, left top;
+    background-repeat: no-repeat;
+}
