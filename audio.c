@@ -40,7 +40,7 @@
 #include "libhhttpp/hhttpp.h"
 
 static pid_t pid_player = -1;
-static int fd_player = -1;  // metadata from player process
+static int fd_meta = -1;  // metadata from player process
 static char **headers = NULL;
 static char *icy_meta = NULL;
 
@@ -71,7 +71,7 @@ static void sigchld(int signo, siginfo_t *info, void *ctx)
 int audio_init()
 {
     pid_player = -1;
-    fd_player = -1;
+    fd_meta = -1;
     headers = NULL;
     icy_meta = NULL;
 
@@ -133,7 +133,7 @@ int audio_stop(event_handler_t cleanup, void *ctx)
     return kill(pid, SIGHUP);
 }
 
-static int metadata_receive(int fd, void *ctx)
+static int ev_metadata_receive(int fd, void *ctx)
 {
     ssize_t n;
     char buf[4096];
@@ -147,7 +147,7 @@ static int metadata_receive(int fd, void *ctx)
         event_fd_del(fd);
         close(fd);
 
-        return fd_player = -1;
+        return fd_meta = -1;
     }
     buf[n] = '\0';
 
@@ -156,7 +156,7 @@ static int metadata_receive(int fd, void *ctx)
 
     if ((icy_meta = strdup(buf)) == NULL)
         return -1;
-    logger(LOG_INFO, "metadata_receive: `%s'", icy_meta);
+    logger(LOG_INFO, "ev_metadata_receive: `%s'", icy_meta);
 
     return 0;
 }
@@ -208,8 +208,8 @@ static int start(int signo, void *ctx)
         break;
       default:
         pid_player = pid;
-        fd_player = fds[0];
-        event_fdread_add(fd_player, metadata_receive, NULL);
+        fd_meta = fds[0];
+        event_fdread_add(fd_meta, ev_metadata_receive, NULL);
         close(fds[1]);
         logger(LOG_INFO, "pid_player: %d", pid);
         break;
