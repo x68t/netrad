@@ -39,7 +39,7 @@
 
 void usage()
 {
-    fprintf(stderr, "usage: netrad [-a [node][:service]][-d] [-u user] [-g group] [-l log-level] [-p pid-file]\n");
+    fprintf(stderr, "usage: netrad [-a [node][:service]][-d] [-u user] [-g group] [-c dir] [-l log-level] [-p pid-file]\n");
     exit(1);
 }
 
@@ -71,7 +71,7 @@ void sigusr(int signo, siginfo_t *info, void *uctx)
     logger_set_level(i);
 }
 
-int daemonize(const char *user, const char *group, const char *pid_file)
+int daemonize(const char *user, const char *group, const char *pid_file, const char *cwd)
 {
     uid_t uid;
     gid_t gid;
@@ -128,6 +128,13 @@ int daemonize(const char *user, const char *group, const char *pid_file)
         fclose(fp);
     }
 
+    if (cwd) {
+        if (chdir(cwd) < 0) {
+            logger(LOG_ERR, "chdir: %s", cwd);
+            return -1;
+        }
+    }
+
     if (gid > 0) {
         if (setgid(gid) < 0) {
             logger(LOG_ERR, "setgid: %d: %m", gid);
@@ -151,7 +158,7 @@ int main(int argc, char *argv[])
     int debug;
     int client_init_done;
     char *node, *service;
-    const char *user, *group, *pid_file;
+    const char *user, *group, *pid_file, *cwd;
 
     logger_init("netrad", LOG_ERR);
     logger(LOG_ERR, "start");
@@ -165,8 +172,8 @@ int main(int argc, char *argv[])
 
     debug = 0;
     client_init_done = 0;
-    user = group = pid_file = NULL;
-    while ((c = getopt(argc, argv, "a:du:g:l:p:")) != -1) {
+    user = group = pid_file = cwd = NULL;
+    while ((c = getopt(argc, argv, "a:du:g:l:p:c:")) != -1) {
         switch (c) {
           case 'a':
             node = optarg;
@@ -191,6 +198,9 @@ int main(int argc, char *argv[])
             break;
           case 'p':
             pid_file = optarg;
+            break;
+          case 'c':
+            cwd = optarg;
             break;
           default:
             usage();
@@ -222,7 +232,7 @@ int main(int argc, char *argv[])
     }
 
     if (!debug) {
-        if (daemonize(user, group, pid_file) < 0)
+        if (daemonize(user, group, pid_file, cwd) < 0)
             return 1;
     }
 
