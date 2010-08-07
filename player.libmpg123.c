@@ -91,7 +91,6 @@ void sighup(int signo)
 {
     //logger(LOG_DEBUG, "SIGHUP");
     audio_close();
-    close(STREAM_IN);
     _exit(0);
 }
 
@@ -177,16 +176,99 @@ void *stream_reader(void *ctx)
     return NULL;
 }
 
+int player(int fd)
+{
+    int r, ch;
+    long flags;
+    size_t pcm_size, len;
+    char *meta;
+    struct mpg123_frameinfo frameinfo;
+    mpg123_handle *mh;
+    static unsigned char pcm[PCM_BUFSIZ];
+
+    r = -1;
+    mpg123_init();
+    if ((mh = mpg123_new(NULL, &r)) == NULL) {
+        logger(LOG_ERR, "mpg123_new: %s", mpg123_plain_strerror(r));
+        goto done;
+    }
+
+    if (mpg123_getparam(mh, MPG123_FLAGS, &flags, NULL) != MPG123_OK) {
+        logger(LOG_ERR, "mpg123_getparam: MPG123_FLAGS: %s", mpg123_strerror(mh));
+        goto done;
+    }
+    flags |= MPG123_QUIET;
+    if (mpg123_param(mh, MPG123_FLAGS, flags, 0) != MPG123_OK) {
+        logger(LOG_ERR, "mpg123_param: MPG123_FLAGS: %s", mpg123_strerror(mh));
+        goto done;
+    }
+
+    if (mpg123_open_fd(mh, fd) != MPG123_OK) {
+        logger(LOG_ERR, "mpg123_open_fd: %s", mpg123_strerror(mh));
+        goto done;
+    }
+
+    for (;;) {
+        if ((r = mpg123_read(mh, pcm, PCM_BUFSIZ, &pcm_size)) == MPG123_DONE) {
+            r = 0;
+            logger(LOG_INFO, "EOF");
+            goto done;
+        }
+        if (r != MPG123_OK)
+            continue;
+        if (mpg123_info(mh, &frameinfo) != MPG123_OK)
+            continue;
+        ch = frameinfo.mode == MPG123_M_MONO? 1: 2;
+        if (audio_init((int)frameinfo.rate, ch, MPG123_ENC_SIGNED_16) < 0) {
+            logger(LOG_ERR, "audio_init: %ldHz, %dch", frameinfo.rate, ch);
+            goto done;
+        }
+        break;
+    }
+
+    for (;;) {
+        switch (r = mpg123_read(mh, pcm, sizeof(pcm), &pcm_size)) {
+          case MPG123_NEW_FORMAT:
+            break;
+          case MPG123_OK:
+            if (mpg123_meta_check(mh) & MPG123_NEW_ICY &&
+                mpg123_icy(mh, &meta) == MPG123_OK)
+            {
+                len = strlen(meta);
+                if (write(META_OUT, meta, len) != len) {
+                    logger(LOG_ERR, "write: meta: %m");
+                    return 1;
+                }
+            }
+            if (write(fd_audio, pcm, pcm_size) != pcm_size) {
+                logger(LOG_ERR, "write: PCM: %m");
+                return 1;
+            }
+            break;
+          case MPG123_DONE:
+            r = 0;
+            logger(LOG_DEBUG, "EOF");
+            goto done;
+          default:
+            if (mpg123_errcode(mh) == MPG123_OUT_OF_SYNC)
+                continue;
+            logger(LOG_ERR, "mpg123_read: %s", mpg123_strerror(mh));
+            return 1;
+        }
+    }
+
+  done:
+    if (mh)
+        mpg123_delete(mh);
+    mpg123_exit();
+
+    return r;
+}
+
 int main(int argc, char *argv[])
 {
-    int fds[2];
     int i, r;
-    int channels, encoding;
-    long rate, flags;
-    size_t size, len;
-    char *meta;
-    mpg123_handle *mh;
-    unsigned char *pcm;
+    int fds[2];
     pthread_t th;
 
     fd_audio = -1;
@@ -201,33 +283,10 @@ int main(int argc, char *argv[])
     for (i = 3; i < 256; i++)
         close(i);
 
-    if ((pcm = malloc(PCM_BUFSIZ)) == NULL) {
-        logger(LOG_ERR, "malloc: %m");
-        return 1;
-    }
-
     if (audio_open(NULL) < 0)
         return 1;
 
     option(argc, argv);
-
-    mpg123_init();
-    if ((mh = mpg123_new(NULL, &r)) == NULL) {
-        logger(LOG_ERR, "mpg123_new: %s", mpg123_plain_strerror(r));
-        return 1;
-    }
-
-    if (logger_get_level() <= LOG_ERR) {
-        if (mpg123_getparam(mh, MPG123_FLAGS, &flags, NULL) != MPG123_OK) {
-            logger(LOG_ERR, "mpg123_getparam: MPG123_FLAGS: %s", mpg123_strerror(mh));
-            return 1;
-        }
-        flags |= MPG123_QUIET;
-        if (mpg123_param(mh, MPG123_FLAGS, flags, 0) != MPG123_OK) {
-            logger(LOG_ERR, "mpg123_param: MPG123_FLAGS: %s", mpg123_strerror(mh));
-            return 1;
-        }
-    }
 
     if (meta_get_metaint() > 0) {
         if (meta_sync(STREAM_IN, META_OUT) < 0) {
@@ -240,62 +299,15 @@ int main(int argc, char *argv[])
         logger(LOG_ERR, "pipe: %m");
         return 1;
     }
+
     if (pthread_create(&th, NULL, stream_reader, fds)) {
         logger(LOG_ERR, "pthread_create: %m");
         return 1;
     }
 
-    if (mpg123_open_fd(mh, fds[0]) != MPG123_OK) {
-        logger(LOG_ERR, "mpg123_open_fd: %s", mpg123_strerror(mh));
-        return 1;
-    }
-
-    for (;;) {
-        switch (r = mpg123_read(mh, pcm, PCM_BUFSIZ, &size)) {
-          case MPG123_NEW_FORMAT:
-            if (mpg123_getformat(mh, &rate, &channels, &encoding) != MPG123_OK) {
-                logger(LOG_ERR, "mpg123_getformat: %s", mpg123_strerror(mh));
-                return 1;
-            }
-            if (audio_init((int)rate, channels, encoding) < 0) {
-                logger(LOG_ERR, "audio_init: %m");
-                return 1;
-            }
-            break;
-          case MPG123_OK:
-            if (mpg123_meta_check(mh) & MPG123_NEW_ICY &&
-                mpg123_icy(mh, &meta) == MPG123_OK)
-            {
-                len = strlen(meta);
-                if (write(META_OUT, meta, len) != len) {
-                    logger(LOG_ERR, "write: meta: %m");
-                    return 1;
-                }
-            }
-            if (write(fd_audio, pcm, size) != size) {
-                logger(LOG_ERR, "write: PCM: %m");
-                return 1;
-            }
-            break;
-          case MPG123_DONE:
-            logger(LOG_DEBUG, "done");
-            break;
-          default:
-            if (mpg123_errcode(mh) == MPG123_OUT_OF_SYNC)
-                continue;
-            logger(LOG_ERR, "mpg123_read: %s", mpg123_strerror(mh));
-            return 1;
-        }
-
-        if (r == MPG123_DONE)
-            break;
-    }
+    r = player(fds[0]);
 
     audio_close();
-    close(STREAM_IN);
-    mpg123_delete(mh);
-    mpg123_exit();
-    free(pcm);
 
-    return 0;
+    return r < 0? 1: 0;
 }
