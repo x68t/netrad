@@ -141,6 +141,7 @@ void *stream_reader(void *ctx)
 {
     int fd, *fds;
     int has_metadata;
+    ssize_t n;
     size_t stream_size;
     char *stream;
 
@@ -157,8 +158,8 @@ void *stream_reader(void *ctx)
     }
 
     for (;;) {
-        if (safe_read(STREAM_IN, stream, stream_size) != stream_size) {
-            logger(LOG_ERR, "read: %m");
+        if ((n = safe_read(STREAM_IN, stream, stream_size)) != stream_size) {
+            logger(LOG_ERR, "read: %ld: %m", n);
             exit(0);
         }
         if (write(fd, stream, stream_size) != stream_size) {
