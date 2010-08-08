@@ -173,8 +173,10 @@ static int start(int signo, void *ctx)
     event_sigcleanup_del(signo, start, ctx);
     r = -1;
     ac = ctx;
-    if (is_running())
+    if (is_running()) {
+        logger(LOG_ERR, "start: player running");
         goto out;
+    }
 
     memset(argv, 0, sizeof(argv));
     argv[0] = ac->player;
