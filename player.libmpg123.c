@@ -225,6 +225,7 @@ int main(int argc, char *argv[])
     for (i = 3; i < 256; i++)
         close(i);
 
+    options(argc, argv);
     logger_init("player.libmpg123", -1);
     logger(LOG_INFO, "start");
 
@@ -235,7 +236,6 @@ int main(int argc, char *argv[])
 
     if (audio_open(NULL) < 0)
         return 1;
-    options(argc, argv);
     r = player(STREAM_IN, META_OUT);
     audio_close();
 
