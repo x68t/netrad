@@ -7,12 +7,12 @@ depend() {
 
 start() {
     ebegin "Starting netrad"
-    env - /usr/local/sbin/netrad ${OPTIONS}
+    env - /usr/local/sbin/netrad ${OPTIONS} -u ${user} -g ${group} -p ${pidfile}
     eend $?
 }
 
 stop() {
     ebegin "Stopping netrad"
-    kill `cat /var/run/netrad.pid`
+    start-stop-daemon --stop --quiet --pidfile ${pidfile} --user ${user}
     eend $?
 }
