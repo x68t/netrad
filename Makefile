@@ -11,7 +11,7 @@ netrad: netrad.o http.o audio.o event.o cdata.o client.o cmd.o logger.o libhhttp
 	${CC} ${CFLAGS} -o $@ netrad.o http.o audio.o event.o cdata.o client.o cmd.o logger.o -Llibhhttpp -lhhttpp
 
 player.libmpg123: player.libmpg123.o meta.o logger.o
-	${CC} ${CFLAGS} -o $@ player.libmpg123.o meta.o logger.o -lmpg123 -lpthread
+	${CC} ${CFLAGS} -o $@ player.libmpg123.o meta.o logger.o -lmpg123
 
 player.libogg: player.libogg.o
 	${CC} ${CFLAGS} -o $@ player.libogg.o -lvorbisfile

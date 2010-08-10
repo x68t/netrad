@@ -14,7 +14,6 @@
 #include <stdio.h>
 #include <poll.h>
 #include <fcntl.h>
-#include <pthread.h>
 #include <signal.h>
 #include <getopt.h>
 #include <errno.h>
@@ -27,7 +26,7 @@
 #define META_OUT 1
 #define PCM_BUFSIZ (1152*2*2*8)
 
-int fd_audio;
+int fd_audio = -1;
 
 int swrite(int fd, const char *s)
 {
@@ -94,7 +93,7 @@ void sighup(int signo)
     _exit(0);
 }
 
-void option(int argc, char *argv[])
+void options(int argc, char *argv[])
 {
     int c, i;
     char *p;
@@ -105,7 +104,8 @@ void option(int argc, char *argv[])
             i = strtol(optarg, &p, 10);
             if (*p)
                 usage();
-            meta_set_metaint(i);
+            if (i > 0)
+                meta_set_metaint(i);
             break;
           case 'l':
             if (logger_set_level_by_string(optarg) < 0)
@@ -118,66 +118,7 @@ void option(int argc, char *argv[])
     }
 }
 
-static ssize_t safe_read(int fd, void *buf, size_t bufsize)
-{
-    ssize_t n, r;
-    char *p;
-
-    p = buf;
-    r = bufsize;
-    while (r > 0) {
-        if ((n = read(fd, p, r)) < 0)
-            return -1;
-        else if (n == 0)
-            break;
-        p += n;
-        r -= n;
-    }
-
-    return bufsize - r;
-}
-
-void *stream_reader(void *ctx)
-{
-    int fd, *fds;
-    int has_metadata;
-    ssize_t n;
-    size_t stream_size;
-    char *stream;
-
-    fds = ctx;
-    fd = fds[1];
-    has_metadata = 0;
-    if ((stream_size = meta_get_metaint()))
-        has_metadata = 1;
-    else
-        stream_size = 2048;
-    if (!(stream = malloc(stream_size))) {
-        logger(LOG_ERR, "malloc: %m");
-        exit(1);
-    }
-
-    for (;;) {
-        if ((n = safe_read(STREAM_IN, stream, stream_size)) != stream_size) {
-            logger(LOG_ERR, "read: %ld: %m", n);
-            exit(0);
-        }
-        if (write(fd, stream, stream_size) != stream_size) {
-            logger(LOG_ERR, "write: %m");
-            exit(1);
-        }
-        if (!has_metadata)
-            continue;
-        if (meta_read(STREAM_IN, META_OUT) < 0) {
-            logger(LOG_ERR, "meta_read: %m");
-            exit(1);
-        }
-    }
-
-    return NULL;
-}
-
-int player(int fd)
+int player(int fd_stream, int fd_meta)
 {
     int r, ch;
     long flags;
@@ -204,7 +145,18 @@ int player(int fd)
         goto done;
     }
 
-    if (mpg123_open_fd(mh, fd) != MPG123_OK) {
+    if (meta_get_metaint() > 0) {
+        if (mpg123_param(mh, MPG123_ICY_INTERVAL, meta_get_metaint(), 0) != MPG123_OK) {
+            logger(LOG_ERR, "mpg123_param: MPG123_ICY_INTERVAL: %s", mpg123_strerror(mh));
+            return 1;
+        }
+        if (meta_sync(fd_stream, fd_meta) < 0) {
+            logger(LOG_ERR, "meta_sync");
+            return 1;
+        }
+    }
+
+    if (mpg123_open_fd(mh, fd_stream) != MPG123_OK) {
         logger(LOG_ERR, "mpg123_open_fd: %s", mpg123_strerror(mh));
         goto done;
     }
@@ -221,7 +173,7 @@ int player(int fd)
             continue;
         ch = frameinfo.mode == MPG123_M_MONO? 1: 2;
         if (audio_init((int)frameinfo.rate, ch, MPG123_ENC_SIGNED_16) < 0) {
-            logger(LOG_ERR, "audio_init: %ldHz, %dch", frameinfo.rate, ch);
+            logger(LOG_ERR, "audio_init: %ldHz, %dch: %m", frameinfo.rate, ch);
             goto done;
         }
         break;
@@ -236,7 +188,7 @@ int player(int fd)
                 mpg123_icy(mh, &meta) == MPG123_OK)
             {
                 len = strlen(meta);
-                if (write(META_OUT, meta, len) != len) {
+                if (write(fd_meta, meta, len) != len) {
                     logger(LOG_ERR, "write: meta: %m");
                     return 1;
                 }
@@ -269,10 +221,10 @@ int player(int fd)
 int main(int argc, char *argv[])
 {
     int i, r;
-    int fds[2];
-    pthread_t th;
 
-    fd_audio = -1;
+    for (i = 3; i < 256; i++)
+        close(i);
+
     logger_init("player.libmpg123", -1);
     logger(LOG_INFO, "start");
 
@@ -281,33 +233,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    for (i = 3; i < 256; i++)
-        close(i);
-
     if (audio_open(NULL) < 0)
         return 1;
-
-    option(argc, argv);
-
-    if (meta_get_metaint() > 0) {
-        if (meta_sync(STREAM_IN, META_OUT) < 0) {
-            logger(LOG_ERR, "meta_sync");
-            return 1;
-        }
-    }
-
-    if (pipe(fds) < 0) {
-        logger(LOG_ERR, "pipe: %m");
-        return 1;
-    }
-
-    if (pthread_create(&th, NULL, stream_reader, fds)) {
-        logger(LOG_ERR, "pthread_create: %m");
-        return 1;
-    }
-
-    r = player(fds[0]);
-
+    options(argc, argv);
+    r = player(STREAM_IN, META_OUT);
     audio_close();
 
     return r < 0? 1: 0;

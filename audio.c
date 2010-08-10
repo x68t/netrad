@@ -40,7 +40,6 @@
 #include "libhhttpp/hhttpp.h"
 
 static pid_t pid_player = -1;
-static int fd_meta = -1;  // metadata from player process
 static char **headers = NULL;
 static char *icy_meta = NULL;
 
@@ -71,7 +70,6 @@ static void sigchld(int signo, siginfo_t *info, void *ctx)
 int audio_init()
 {
     pid_player = -1;
-    fd_meta = -1;
     headers = NULL;
     icy_meta = NULL;
 
@@ -128,7 +126,7 @@ int audio_stop(event_handler_t cleanup, void *ctx)
         event_sigcleanup_add(SIGCHLD, stop, NULL);
 
     pid = pid_player;
-    logger(LOG_INFO, "audio_stop: kill(%d)", pid);
+    logger(LOG_INFO, "audio_stop: kill(%d): cleanup: %p", pid, cleanup);
 
     return kill(pid, SIGHUP);
 }
@@ -136,7 +134,7 @@ int audio_stop(event_handler_t cleanup, void *ctx)
 static int ev_metadata_receive(int fd, void *ctx)
 {
     ssize_t n;
-    char buf[4096];
+    char buf[4097];
 
     if (icy_meta) {
         free(icy_meta);
@@ -146,8 +144,7 @@ static int ev_metadata_receive(int fd, void *ctx)
     if ((n = read(fd, buf , sizeof(buf)-1)) <= 0) {
         event_fd_del(fd);
         close(fd);
-
-        return fd_meta = -1;
+        return 0;
     }
     buf[n] = '\0';
 
@@ -170,6 +167,7 @@ static int start(int signo, void *ctx)
     const char *metaint;
     const char *argv[6];
 
+    logger(LOG_INFO, "audio.c:start");
     event_sigcleanup_del(signo, start, ctx);
     r = -1;
     ac = ctx;
@@ -183,7 +181,7 @@ static int start(int signo, void *ctx)
     argv[1] = "-l";
     if ((argv[2] = logger_get_level_by_string()) == NULL)
         goto out;
-    if ((metaint = hhttpp_response_header_get(ac->req, "icy-metaint")) != NULL) {
+    if ((metaint = hhttpp_response_header_get(ac->req, "icy-metaint"))) {
         argv[3] = "-m";
         argv[4] = metaint;
     }
@@ -210,8 +208,7 @@ static int start(int signo, void *ctx)
         break;
       default:
         pid_player = pid;
-        fd_meta = fds[0];
-        event_fdread_add(fd_meta, ev_metadata_receive, NULL);
+        event_fdread_add(fds[0], ev_metadata_receive, NULL);
         close(fds[1]);
         logger(LOG_INFO, "pid_player: %d", pid);
         break;

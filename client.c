@@ -104,7 +104,7 @@ static int client_accept(int sd, void *ctx)
     int fd, e;
     socklen_t sslen;
     struct sockaddr_storage ss;
-    char host[64];
+    char host[64], port[32];
 
     sslen = sizeof(ss);
     if ((fd = accept(sd, (struct sockaddr *)&ss, &sslen)) < 0) {
@@ -120,10 +120,10 @@ static int client_accept(int sd, void *ctx)
     }
 
     if (logger_get_level() >= LOG_INFO) {
-        if ((e = getnameinfo((struct sockaddr *)&ss, sslen, host, sizeof(host), NULL, 0, NI_NUMERICHOST)) != 0)
-            logger(LOG_WARNING, "getnameinfo: %m", gai_strerror(e));
+        if ((e = getnameinfo((struct sockaddr *)&ss, sslen, host, sizeof(host), port, sizeof(port), NI_NUMERICHOST)))
+            logger(LOG_WARNING, "getnameinfo: %s", gai_strerror(e));
         else
-            logger(LOG_INFO, "client_accept: connect from %s, fd=%d", host, fd);
+            logger(LOG_INFO, "client_accept: fd=%d: `%s:%s'", fd, host, port);
     }
 
     return event_fdread_add(fd, client_read, NULL);
