@@ -27,6 +27,7 @@
 #define PCM_BUFSIZ (1152*2*2*8)
 
 int fd_audio = -1;
+ssize_t (*audio_write)(int fd, const void *p, size_t size);
 
 int swrite(int fd, const char *s)
 {
@@ -118,6 +119,24 @@ void options(int argc, char *argv[])
     }
 }
 
+ssize_t mute_write(int fd, const void *p, size_t size)
+{
+    int i;
+    size_t n;
+    int16_t *q;
+    static double amp = 0.1;
+
+    q = (int16_t *)p;
+    n = size / sizeof(*q);
+    for (i = 0; i < n; i++)
+        q[i] *= amp;
+    amp += 0.1;
+    if (amp >= 1)
+        audio_write = write;
+
+    return write(fd, p, size);
+}
+
 int player(int fd_stream, int fd_meta)
 {
     int r, ch;
@@ -129,6 +148,7 @@ int player(int fd_stream, int fd_meta)
     static unsigned char pcm[PCM_BUFSIZ];
 
     r = -1;
+    audio_write = mute_write;
     mpg123_init();
     if ((mh = mpg123_new(NULL, &r)) == NULL) {
         logger(LOG_ERR, "mpg123_new: %s", mpg123_plain_strerror(r));
@@ -193,7 +213,7 @@ int player(int fd_stream, int fd_meta)
                     return 1;
                 }
             }
-            if (write(fd_audio, pcm, pcm_size) != pcm_size) {
+            if (audio_write(fd_audio, pcm, pcm_size) != pcm_size) {
                 logger(LOG_ERR, "write: PCM: %m");
                 return 1;
             }
