@@ -27,6 +27,7 @@
 #define PCM_BUFSIZ (1152*2*2*8)
 
 int fd_audio = -1;
+int fs, ch;
 ssize_t (*audio_write)(int fd, const void *p, size_t size);
 
 int swrite(int fd, const char *s)
@@ -74,6 +75,8 @@ int audio_init(int rate, int channels, int encoding)
         return -1;
     }
     logger(LOG_INFO, "audio_init: %dHz, %dch", rate, channels);
+    fs = rate;
+    ch = channels;
 
     return 0;
 }
@@ -119,19 +122,29 @@ void options(int argc, char *argv[])
     }
 }
 
-ssize_t mute_write(int fd, const void *p, size_t size)
+void amplitude(const void *p, size_t size, float gain)
 {
     int i;
     size_t n;
     int16_t *q;
-    static double amp = 0.1;
 
     q = (int16_t *)p;
     n = size / sizeof(*q);
     for (i = 0; i < n; i++)
-        q[i] *= amp;
-    amp += 0.1;
-    if (amp >= 1)
+        q[i] *= gain;
+}
+
+ssize_t mute_write(int fd, const void *p, size_t size)
+{
+    float gain;
+    static size_t nbyte = 0;
+
+#define DURATION 1.0
+    nbyte += size;
+    gain = nbyte / (DURATION * fs * ch * sizeof(int16_t));
+    if (gain < 1)
+        amplitude(p, size, gain);
+    else
         audio_write = write;
 
     return write(fd, p, size);
