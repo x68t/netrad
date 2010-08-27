@@ -10,14 +10,14 @@ all: netrad player.libmpg123 player.libogg player.raw player.noise
 netrad: netrad.o http.o audio.o event.o cdata.o client.o cmd.o logger.o libhhttpp/libhhttpp.a
 	${CC} ${CFLAGS} -o $@ netrad.o http.o audio.o event.o cdata.o client.o cmd.o logger.o -Llibhhttpp -lhhttpp
 
-player.libmpg123: player.libmpg123.o meta.o logger.o
-	${CC} ${CFLAGS} -o $@ player.libmpg123.o meta.o logger.o -lmpg123
+player.libmpg123: player.libmpg123.o meta.o logger.o sndcard.o
+	${CC} ${CFLAGS} -o $@ player.libmpg123.o meta.o logger.o sndcard.o -lmpg123 -lasound
 
 player.libogg: player.libogg.o
 	${CC} ${CFLAGS} -o $@ player.libogg.o -lvorbisfile
 
-player.raw: player.raw.o
-	${CC} ${CFLAGS} -o $@ player.raw.o logger.o
+player.raw: player.raw.o sndcard.o
+	${CC} ${CFLAGS} -o $@ player.raw.o logger.o sndcard.o -lasound
 
 player.libmad: player.libmad.o
 	${CC} ${CFLAGS} -o $@ player.libmad.o -lmad

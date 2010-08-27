@@ -7,7 +7,7 @@ depend() {
 
 start() {
     ebegin "Starting netrad"
-    env - /usr/local/sbin/netrad ${OPTIONS} -u ${user} -g ${group} -p ${pidfile}
+    env - /usr/local/sbin/netrad ${options} -u ${user} -g ${group} -p ${pidfile} -D "${device}"
     eend $?
 }
 

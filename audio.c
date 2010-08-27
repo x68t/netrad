@@ -39,6 +39,7 @@
 #include "logger.h"
 #include "libhhttpp/hhttpp.h"
 
+const char *audio_device_name;
 static pid_t pid_player = -1;
 static char **headers = NULL;
 static char *icy_meta = NULL;
@@ -160,12 +161,12 @@ static int ev_metadata_receive(int fd, void *ctx)
 
 static int start(int signo, void *ctx)
 {
-    int r;
+    int r, argc;
     pid_t pid;
     int fds[2];
     struct audio_ctx *ac;
     const char *metaint;
-    const char *argv[6];
+    const char *argv[8];
 
     logger(LOG_INFO, "audio.c:start");
     event_sigcleanup_del(signo, start, ctx);
@@ -177,13 +178,18 @@ static int start(int signo, void *ctx)
     }
 
     memset(argv, 0, sizeof(argv));
-    argv[0] = ac->player;
-    argv[1] = "-l";
-    if ((argv[2] = logger_get_level_by_string()) == NULL)
+    argc = 0;
+    argv[argc++] = ac->player;
+    argv[argc++] = "-l";
+    if ((argv[argc++] = logger_get_level_by_string()) == NULL)
         goto out;
     if ((metaint = hhttpp_response_header_get(ac->req, "icy-metaint"))) {
-        argv[3] = "-m";
-        argv[4] = metaint;
+        argv[argc++] = "-m";
+        argv[argc++] = metaint;
+    }
+    if (audio_device_name) {
+        argv[argc++] = "-D";
+        argv[argc++] = audio_device_name;
     }
 
     get_headers(ac->req);

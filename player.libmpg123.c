@@ -21,11 +21,13 @@
 #include "mpg123.h"
 #include "meta.h"
 #include "logger.h"
+#include "sndcard.h"
 
 #define STREAM_IN 0
 #define META_OUT 1
 #define PCM_BUFSIZ (1152*2*2*8)
 
+const char *device_name;
 int fd_audio = -1;
 int fs, ch;
 ssize_t (*audio_write)(int fd, const void *p, size_t size);
@@ -41,7 +43,7 @@ int swrite(int fd, const char *s)
 
 void usage()
 {
-    swrite(2, "usage: player.libmpg123 [-m metaint]\n");
+    swrite(2, "usage: player.libmpg123 [-l log-level] [-m metaint] [-D device-name]\n");
     exit(1);
 }
 
@@ -50,7 +52,7 @@ int audio_open(const char *dev)
     if (!dev)
         dev = "/dev/dsp";
 
-    if ((fd_audio = open(dev, O_WRONLY)) < 0) {
+    if ((fd_audio = sndcard_dsp_open(dev, O_WRONLY)) < 0) {
         logger(LOG_ERR, "open: %s: %m", dev);
         return -1;
     }
@@ -102,7 +104,7 @@ void options(int argc, char *argv[])
     int c, i;
     char *p;
 
-    while ((c = getopt(argc, argv, "m:l:")) != -1) {
+    while ((c = getopt(argc, argv, "m:l:D:")) != -1) {
         switch (c) {
           case 'm':
             i = strtol(optarg, &p, 10);
@@ -114,6 +116,9 @@ void options(int argc, char *argv[])
           case 'l':
             if (logger_set_level_by_string(optarg) < 0)
                 usage();
+            break;
+          case 'D':
+            device_name = optarg;
             break;
           default:
             usage();
@@ -255,20 +260,24 @@ int main(int argc, char *argv[])
 {
     int i, r;
 
-    for (i = 3; i < 256; i++)
-        close(i);
-
-    options(argc, argv);
     logger_init("player.libmpg123", -1);
     logger(LOG_INFO, "start");
+
+    for (i = 3; i < 256; i++)
+        close(i);
 
     if (signal(SIGHUP, sighup) == SIG_ERR) {
         logger(LOG_ERR, "signal: %m");
         return 1;
     }
 
-    if (audio_open(NULL) < 0)
+    options(argc, argv);
+
+    if (audio_open(device_name) < 0) {
+        logger(LOG_ERR, "audio_init: %m");
         return 1;
+    }
+
     r = player(STREAM_IN, META_OUT);
     audio_close();
 

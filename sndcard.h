@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2008
+ * Copyright (c) 2007-2010
  *      Hiroyuki Yamashita <hiroya@magical-technology.com>.  All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -23,21 +23,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef _SNDCARD_H_
+#define _SNDCARD_H_
 
-#ifndef _AUDIO_H_
-#define _AUDIO_H_
+int sndcard_dsp_open(const char *dsp_name, int mode);
+int sndcard_mixer_open(const char *mixer_name, int mode);
 
-#include <sys/types.h>
-#include "event.h"
-
-extern const char *audio_device_name;
-
-struct hhttpp;
-
-int audio_init();
-int audio_stop(event_handler_t callback, void *ctx);
-int audio_start(int fd, struct hhttpp *req, const char *player);
-int audio_status(int fd);
-
-#endif // _AUDIO_H_
-
+#endif /* _SNDCARD_H_ */

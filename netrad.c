@@ -173,7 +173,7 @@ int main(int argc, char *argv[])
     debug = 0;
     client_init_done = 0;
     user = group = pid_file = cwd = NULL;
-    while ((c = getopt(argc, argv, "a:du:g:l:p:c:")) != -1) {
+    while ((c = getopt(argc, argv, "a:du:g:l:p:c:D:")) != -1) {
         switch (c) {
           case 'a':
             node = optarg;
@@ -201,6 +201,9 @@ int main(int argc, char *argv[])
             break;
           case 'c':
             cwd = optarg;
+            break;
+          case 'D':
+            audio_device_name = optarg;
             break;
           default:
             usage();

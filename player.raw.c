@@ -38,12 +38,14 @@
 #include <unistd.h>
 #include "meta.h"
 #include "logger.h"
+#include "sndcard.h"
 
 #define STREAM_IN 0
 #define META_OUT 1
 #define PCM_BUFSIZ (1152*2*2*8)
 
-int fd_audio;
+const char *device_name;
+int fd_audio = -1;
 
 int swrite(int fd, const char *s)
 {
@@ -56,7 +58,7 @@ int swrite(int fd, const char *s)
 
 void usage()
 {
-    swrite(2, "usage: player.raw [-m metaint]\n");
+    swrite(2, "usage: player.raw [-l log-level] [-m metaint] [-D device-name]\n");
     exit(1);
 }
 
@@ -65,7 +67,7 @@ int audio_open(const char *dev)
     if (!dev)
         dev = "/dev/dsp";
 
-    if ((fd_audio = open(dev, O_WRONLY)) < 0) {
+    if ((fd_audio = sndcard_dsp_open(dev, O_WRONLY)) < 0) {
         logger(LOG_ERR, "open: %s: %m", dev);
         return -1;
     }
@@ -108,12 +110,12 @@ void sighup(int signo)
     _exit(0);
 }
 
-void option(int argc, char *argv[])
+void options(int argc, char *argv[])
 {
     int c, i;
     char *p;
 
-    while ((c = getopt(argc, argv, "m:l:")) != -1) {
+    while ((c = getopt(argc, argv, "m:l:D:")) != -1) {
         switch (c) {
           case 'm':
             i = strtol(optarg, &p, 10);
@@ -125,6 +127,9 @@ void option(int argc, char *argv[])
             if (logger_set_level_by_string(optarg) < 0)
                 usage();
             break;
+          case 'D':
+            device_name = optarg;
+            break;
           default:
             usage();
             /* NOTREACHED */
@@ -132,55 +137,56 @@ void option(int argc, char *argv[])
     }
 }
 
-int main(int argc, char *argv[])
+int player(int fd_stream)
 {
-    int i;
     ssize_t n;
     static int16_t pcm[1152*2*8];
 
-    fd_audio = -1;
+    for (;;) {
+        if ((n = read(fd_stream, pcm, sizeof(pcm))) < 0) {
+            logger(LOG_ERR, "read: %m");
+            return -1;
+        }
+        if (write(fd_audio, pcm, n) != n) {
+            logger(LOG_ERR, "write: %m");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+int main(int argc, char *argv[])
+{
+    int i, r;
+
     logger_init("player.raw", -1);
     logger(LOG_INFO, "start");
+
+    for (i = 3; i < 256; i++)
+        close(i);
 
     if (signal(SIGHUP, sighup) == SIG_ERR) {
         logger(LOG_ERR, "signal: %m");
         return 1;
     }
 
-    for (i = 3; i < 256; i++)
-        close(i);
+    options(argc, argv);
 
-    if (audio_open(NULL) < 0)
+    if (audio_open(device_name) < 0) {
+        logger(LOG_ERR, "audio_init: %m");
         return 1;
-
-    option(argc, argv);
-
-#if 0
-    if (meta_get_metaint() > 0) {
-        if (meta_sync(STREAM_IN, META_OUT) < 0)
-            return 1;
     }
-#endif
 
     if (audio_init() < 0) {
         logger(LOG_ERR, "audio_init: %m");
         return 1;
     }
 
-    for (;;) {
-        if ((n = read(STREAM_IN, pcm, sizeof(pcm))) < 0) {
-            logger(LOG_ERR, "read: %m");
-            return 1;
-        }
-        if (write(fd_audio, pcm, n) != n) {
-            logger(LOG_ERR, "write: %m");
-            return 1;
-        }
-    }
+    r = player(STREAM_IN);
 
     audio_close();
     close(STREAM_IN);
-    close(fd_audio);
 
     return 0;
 }

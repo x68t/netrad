@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2008
+ * Copyright (c) 2007-2010
  *      Hiroyuki Yamashita <hiroya@magical-technology.com>.  All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -23,21 +23,65 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include <alsa/asoundlib.h>
+#include <string.h>
 
-#ifndef _AUDIO_H_
-#define _AUDIO_H_
+#define strequal !strcmp
+#define strnequal !strncmp
 
-#include <sys/types.h>
-#include "event.h"
+static int snd_card_first()
+{
+    int i;
 
-extern const char *audio_device_name;
+    i = -1;
+    if (snd_card_next(&i) < 0)
+        return -1;
 
-struct hhttpp;
+    return i;
+}
 
-int audio_init();
-int audio_stop(event_handler_t callback, void *ctx);
-int audio_start(int fd, struct hhttpp *req, const char *player);
-int audio_status(int fd);
+static int find_card(const char *device_name)
+{
+    int i, r;
+    char *name;
 
-#endif // _AUDIO_H_
+    for (i = snd_card_first(); i != -1; snd_card_next(&i)) {
+        if (snd_card_get_name(i, &name) < 0)
+            continue;
+        r = strequal(name, device_name);
+        free(name);
+        if (r)
+            return i;
+    }
 
+    return -1;
+}
+
+static int sndcard_open(const char *device_name, int mode, const char *template)
+{
+    int card;
+    char dev[32];
+
+    if (strnequal(device_name, "/dev/", 5))
+        return open(device_name, mode);
+
+    if ((card = find_card(device_name)) < 0)
+        return -1;
+    snprintf(dev, sizeof(dev), template, card);
+    if (!card) {
+        // "/dev/dsp0" -> "/dev/dsp"
+        dev[strlen(dev)-1] = '\0';
+    }
+
+    return open(dev, mode);
+}
+
+int sndcard_dsp_open(const char *dsp_name, int mode)
+{
+    return sndcard_open(dsp_name, mode, "/dev/dsp%d");
+}
+
+int sndcard_mixer_open(const char *mixer_name, int mode)
+{
+    return sndcard_open(mixer_name, mode, "/dev/mixer%d");
+}
