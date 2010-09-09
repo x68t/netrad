@@ -271,6 +271,7 @@ int http_receive(int fd, void *ctx)
         { "audio/x-scpls", type_audio_x_scpls },
         { "application/xspf+xml", type_application_xspf },
         { "video/x-ms-asx", type_video_x_ms_asx },
+        { "video/x-ms-asf", type_video_x_ms_asx },
         { NULL, NULL }
     };
 
