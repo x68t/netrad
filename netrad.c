@@ -24,6 +24,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sys/socket.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -36,6 +37,7 @@
 #include "audio.h"
 #include "client.h"
 #include "logger.h"
+#include "growl.h"
 
 void usage()
 {
@@ -159,6 +161,7 @@ int main(int argc, char *argv[])
     int client_init_done;
     char *node, *service;
     const char *user, *group, *pid_file, *cwd;
+    const char *growl;
 
     logger_init("netrad", LOG_ERR);
     logger(LOG_ERR, "start");
@@ -172,8 +175,8 @@ int main(int argc, char *argv[])
 
     debug = 0;
     client_init_done = 0;
-    user = group = pid_file = cwd = NULL;
-    while ((c = getopt(argc, argv, "a:du:g:l:p:c:D:")) != -1) {
+    user = group = pid_file = cwd = growl = NULL;
+    while ((c = getopt(argc, argv, "a:du:g:l:p:c:D:G:")) != -1) {
         switch (c) {
           case 'a':
             node = optarg;
@@ -205,11 +208,17 @@ int main(int argc, char *argv[])
           case 'D':
             audio_device_name = optarg;
             break;
+          case 'G':
+            growl = optarg;
+            break;
           default:
             usage();
             /* NOTREACHED */
         }
     }
+
+    if (growl)
+        growl_init(growl, NULL, SOCK_DGRAM);
 
     if (event_sigaction_add(SIGHUP, NULL, NULL) < 0 ||
         event_sigaction_add(SIGINT, NULL, NULL) < 0 ||

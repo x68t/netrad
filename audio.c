@@ -37,7 +37,11 @@
 #include "audio.h"
 #include "event.h"
 #include "logger.h"
+#include "growl.h"
 #include "libhhttpp/hhttpp.h"
+
+#define strequal !strcmp
+#define strnequal !strncmp
 
 const char *audio_device_name;
 static pid_t pid_player = -1;
@@ -132,9 +136,23 @@ int audio_stop(event_handler_t cleanup, void *ctx)
     return kill(pid, SIGHUP);
 }
 
+static const char *find_header(const char *name)
+{
+    int i;
+
+    for (i = 0; headers[i]; i++) {
+        if (strnequal(headers[i], name, strlen(name)))
+            return headers[i] + strlen(name);
+    }
+
+    return NULL;
+}
+
 static int ev_metadata_receive(int fd, void *ctx)
 {
     ssize_t n;
+    const char *title, *description;
+    char *p;
     char buf[4097];
 
     if (icy_meta) {
@@ -154,6 +172,17 @@ static int ev_metadata_receive(int fd, void *ctx)
 
     if ((icy_meta = strdup(buf)) == NULL)
         return -1;
+
+    if (!(title = find_header("icy-name: ")))
+        title = "netrad";
+    if (strnequal(buf, "StreamTitle='", 13)) {
+        description = buf + 13;
+        if ((p = strstr(buf, "';")))
+            *p = '\0';
+    } else
+        description = buf;
+    growl_notification(title, description);
+
     logger(LOG_INFO, "ev_metadata_receive: `%s'", icy_meta);
 
     return 0;

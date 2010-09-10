@@ -7,8 +7,8 @@ CFLAGS = -O2 -march=native -Wall -pipe -DMP3_PLAYER='"${LIBEXEC}/player.libmpg12
 
 all: netrad player.libmpg123 player.libogg player.raw player.noise
 
-netrad: netrad.o http.o audio.o event.o cdata.o client.o cmd.o logger.o libhhttpp/libhhttpp.a
-	${CC} ${CFLAGS} -o $@ netrad.o http.o audio.o event.o cdata.o client.o cmd.o logger.o -Llibhhttpp -lhhttpp
+netrad: netrad.o http.o audio.o event.o cdata.o client.o cmd.o logger.o growl.o libhhttpp/libhhttpp.a
+	${CC} ${CFLAGS} -o $@ netrad.o http.o audio.o event.o cdata.o client.o cmd.o logger.o growl.o -Llibhhttpp -lhhttpp -lssl
 
 player.libmpg123: player.libmpg123.o meta.o logger.o sndcard.o
 	${CC} ${CFLAGS} -o $@ player.libmpg123.o meta.o logger.o sndcard.o -lmpg123 -lasound
