@@ -38,6 +38,9 @@
 #include <openssl/md5.h>
 #include "growl.h"
 
+#define GROWL_SERVICE_TCP "23052"
+#define GROWL_SERVICE_UDP "9887"
+
 #define GROWL_PROTOCOL_VERSION 1
 #define GROWL_PROTOCOL_VERSION_AES128 2
 
@@ -62,13 +65,13 @@ struct growl_registration_packet {
 };
 
 struct growl_notification_packet {
-    int8_t ver;
-    int8_t type;
-    int16_t flags;
-    int16_t notification_length;
-    int16_t title_length;
-    int16_t description_length;
-    int16_t app_name_length;
+    uint8_t ver;
+    uint8_t type;
+    uint16_t flags;
+    uint16_t notification_length;
+    uint16_t title_length;
+    uint16_t description_length;
+    uint16_t app_name_length;
 };
 
 static int connect_to(const char *node, const char *service, int socktype)
@@ -82,10 +85,10 @@ static int connect_to(const char *node, const char *service, int socktype)
     if (!service) {
         switch (socktype) {
           case SOCK_STREAM:
-            service = "23052";
+            service = GROWL_SERVICE_TCP;
             break;
           case SOCK_DGRAM:
-            service = "9887";
+            service = GROWL_SERVICE_UDP;
             break;
           default:
             return -1;
@@ -125,34 +128,30 @@ static void add_packet(struct iovec *iov, const void *p, size_t size, MD5_CTX *c
         MD5_Update(ctx, p, size);
 }
 
-static int regist(int sd)
+static int registration(int sd)
 {
     int n;
-    struct growl_registration_packet packet;
     int16_t notification_length;
-    uint8_t md5[16], ndef[1];
-    struct iovec iov[20];
+    struct growl_registration_packet packet;
     MD5_CTX ctx;
+    struct iovec iov[20];
+    uint8_t md5[MD5_DIGEST_LENGTH], ndef[1];
 
-    MD5_Init(&ctx);
-
-    n = 0;
-    memset(&packet, 0, sizeof(packet));
     packet.ver = GROWL_PROTOCOL_VERSION;
     packet.type = GROWL_TYPE_REGISTRATION;
     packet.app_name_length = htons(strlen(APP_NAME));
     packet.nall = 1;
     packet.ndef = 1;
+    notification_length = htons(strlen(NOTIFICATION_NAME));
+    ndef[0] = 0;
+
+    n = 0;
+    MD5_Init(&ctx);
     add_packet(&iov[n++], &packet, sizeof(packet), &ctx);
     add_packet(&iov[n++], APP_NAME, strlen(APP_NAME), &ctx);
-
-    notification_length = htons(strlen(NOTIFICATION_NAME));
     add_packet(&iov[n++], &notification_length, sizeof(notification_length), &ctx);
     add_packet(&iov[n++], NOTIFICATION_NAME, strlen(NOTIFICATION_NAME), &ctx);
-
-    ndef[0] = 0;
     add_packet(&iov[n++], ndef, sizeof(ndef), &ctx);
-
     MD5_Final(md5, &ctx);
     add_packet(&iov[n++], md5, sizeof(md5), NULL);
 
@@ -163,7 +162,7 @@ int growl_init(const char *node, const char *service, int socktype)
 {
     if ((sd = connect_to(node, service, socktype)) < 0)
         return -1;
-    if (regist(sd) < 0) {
+    if (registration(sd) < 0) {
         close(sd);
         sd = -1;
         return -1;
@@ -172,29 +171,35 @@ int growl_init(const char *node, const char *service, int socktype)
     return 0;
 }
 
-int growl_notification(const char *title, const char *description)
+int growl_notification(const char *title, const char *description, int priority, int sticky)
 {
-    struct growl_notification_packet packet;
     int n;
-    struct iovec iov[10];
+    int16_t flags;
+    struct growl_notification_packet packet;
     MD5_CTX ctx;
-    unsigned char md5[16];
+    struct iovec iov[10];
+    uint8_t md5[MD5_DIGEST_LENGTH];
 
     if (sd < 0)
         return -1;
 
-    n = 0;
-    MD5_Init(&ctx);
-    memset(&packet, 0, sizeof(packet));
+    flags = (priority & 7) * 2;
+    if (priority < 0)
+        flags |= 8;
+    if (sticky)
+        flags |= 0x100;
+
     packet.ver = GROWL_PROTOCOL_VERSION;
     packet.type = GROWL_TYPE_NOTIFICATION;
-    packet.flags = 2;
+    packet.flags = htons(flags);
     packet.notification_length = htons(strlen(NOTIFICATION_NAME));
     packet.title_length = htons(strlen(title));
     packet.description_length = htons(strlen(description));
     packet.app_name_length = htons(strlen(APP_NAME));
-    add_packet(&iov[n++], &packet, sizeof(packet), &ctx);
 
+    n = 0;
+    MD5_Init(&ctx);
+    add_packet(&iov[n++], &packet, sizeof(packet), &ctx);
     add_packet(&iov[n++], NOTIFICATION_NAME, strlen(NOTIFICATION_NAME), &ctx);
     add_packet(&iov[n++], title, strlen(title), &ctx);
     add_packet(&iov[n++], description, strlen(description), &ctx);

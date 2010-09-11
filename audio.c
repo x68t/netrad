@@ -181,7 +181,7 @@ static int ev_metadata_receive(int fd, void *ctx)
             *p = '\0';
     } else
         description = buf;
-    growl_notification(title, description);
+    growl_notification(title, description, 0, 0);
 
     logger(LOG_INFO, "ev_metadata_receive: `%s'", icy_meta);
 

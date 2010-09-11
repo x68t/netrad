@@ -28,6 +28,6 @@
 #define _GROWL_H_
 
 int growl_init(const char *node, const char *service, int socktype);
-int growl_notification(const char *title, const char *description);
+int growl_notification(const char *title, const char *description, int priority, int sticky);
 
 #endif /* _GROWL_H_ */
