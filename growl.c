@@ -130,27 +130,40 @@ static void add_packet(struct iovec *iov, const void *p, size_t size, MD5_CTX *c
 
 static int registration(int sd)
 {
-    int n;
-    int16_t notification_length;
+    int n, i;
+    size_t length;
     struct growl_registration_packet packet;
     MD5_CTX ctx;
     struct iovec iov[20];
-    uint8_t md5[MD5_DIGEST_LENGTH], ndef[1];
+    struct {
+        const char *name;
+        uint16_t length;
+    } notifications[] = {
+        { GROWL_NOTIFICATION_TUNE_IN, 0 },
+        { GROWL_NOTIFICATION_METADATA_RECEIVED, 0 },
+        { GROWL_NOTIFICATION_DISCONNECTED, 0 },
+    };
+    uint8_t ndef[sizeof(notifications)/sizeof(notifications[0])];
+    unsigned char md5[MD5_DIGEST_LENGTH];
 
     packet.ver = GROWL_PROTOCOL_VERSION;
     packet.type = GROWL_TYPE_REGISTRATION;
     packet.app_name_length = htons(strlen(APP_NAME));
-    packet.nall = 1;
-    packet.ndef = 1;
-    notification_length = htons(strlen(NOTIFICATION_NAME));
-    ndef[0] = 0;
+    packet.nall = sizeof(notifications)/sizeof(notifications[0]);
+    packet.ndef = sizeof(notifications)/sizeof(notifications[0]);
+    for (i = 0; i < sizeof(ndef)/sizeof(ndef[0]); i++)
+        ndef[i] = i;
 
     n = 0;
     MD5_Init(&ctx);
     add_packet(&iov[n++], &packet, sizeof(packet), &ctx);
     add_packet(&iov[n++], APP_NAME, strlen(APP_NAME), &ctx);
-    add_packet(&iov[n++], &notification_length, sizeof(notification_length), &ctx);
-    add_packet(&iov[n++], NOTIFICATION_NAME, strlen(NOTIFICATION_NAME), &ctx);
+    for (i = 0; i < sizeof(notifications)/sizeof(notifications[0]); i++) {
+        length = strlen(notifications[i].name);
+        notifications[i].length = htons(length);
+        add_packet(&iov[n++], &notifications[i].length, sizeof(notifications[i].length), &ctx);
+        add_packet(&iov[n++], notifications[i].name, length, &ctx);
+    }
     add_packet(&iov[n++], ndef, sizeof(ndef), &ctx);
     MD5_Final(md5, &ctx);
     add_packet(&iov[n++], md5, sizeof(md5), NULL);
@@ -171,7 +184,7 @@ int growl_init(const char *node, const char *service, int socktype)
     return 0;
 }
 
-int growl_notification(const char *title, const char *description, int priority, int sticky)
+int growl_notification(const char *notification_name, const char *title, const char *description, int priority, int sticky)
 {
     int n;
     int16_t flags;
@@ -192,7 +205,7 @@ int growl_notification(const char *title, const char *description, int priority,
     packet.ver = GROWL_PROTOCOL_VERSION;
     packet.type = GROWL_TYPE_NOTIFICATION;
     packet.flags = htons(flags);
-    packet.notification_length = htons(strlen(NOTIFICATION_NAME));
+    packet.notification_length = htons(strlen(notification_name));
     packet.title_length = htons(strlen(title));
     packet.description_length = htons(strlen(description));
     packet.app_name_length = htons(strlen(APP_NAME));
@@ -200,7 +213,7 @@ int growl_notification(const char *title, const char *description, int priority,
     n = 0;
     MD5_Init(&ctx);
     add_packet(&iov[n++], &packet, sizeof(packet), &ctx);
-    add_packet(&iov[n++], NOTIFICATION_NAME, strlen(NOTIFICATION_NAME), &ctx);
+    add_packet(&iov[n++], notification_name, strlen(notification_name), &ctx);
     add_packet(&iov[n++], title, strlen(title), &ctx);
     add_packet(&iov[n++], description, strlen(description), &ctx);
     add_packet(&iov[n++], APP_NAME, strlen(APP_NAME), &ctx);

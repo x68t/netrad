@@ -94,6 +94,18 @@ static int get_headers(struct hhttpp *req)
     return 0;
 }
 
+static const char *find_header(const char *name)
+{
+    int i;
+
+    for (i = 0; headers[i]; i++) {
+        if (strnequal(headers[i], name, strlen(name)))
+            return headers[i] + strlen(name);
+    }
+
+    return NULL;
+}
+
 static int is_running()
 {
     if (pid_player > 0)
@@ -107,6 +119,7 @@ static int stop(int signo, void *ctx)
         return -1;
 
     event_sigcleanup_del(signo, stop, ctx);
+    growl_notification(GROWL_NOTIFICATION_DISCONNECTED, "netrad", "disconnected", 0, 0);
 
     hhttpp_response_headers_free(headers);
     headers = NULL;
@@ -134,18 +147,6 @@ int audio_stop(event_handler_t cleanup, void *ctx)
     logger(LOG_INFO, "audio_stop: kill(%d): cleanup: %p", pid, cleanup);
 
     return kill(pid, SIGHUP);
-}
-
-static const char *find_header(const char *name)
-{
-    int i;
-
-    for (i = 0; headers[i]; i++) {
-        if (strnequal(headers[i], name, strlen(name)))
-            return headers[i] + strlen(name);
-    }
-
-    return NULL;
 }
 
 static int ev_metadata_receive(int fd, void *ctx)
@@ -181,7 +182,7 @@ static int ev_metadata_receive(int fd, void *ctx)
             *p = '\0';
     } else
         description = buf;
-    growl_notification(title, description, 0, 0);
+    growl_notification(GROWL_NOTIFICATION_METADATA_RECEIVED, title, description, 0, 0);
 
     logger(LOG_INFO, "ev_metadata_receive: `%s'", icy_meta);
 
@@ -194,7 +195,7 @@ static int start(int signo, void *ctx)
     pid_t pid;
     int fds[2];
     struct audio_ctx *ac;
-    const char *metaint;
+    const char *metaint, *icy_name;
     const char *argv[8];
 
     logger(LOG_INFO, "audio.c:start");
@@ -248,6 +249,8 @@ static int start(int signo, void *ctx)
         logger(LOG_INFO, "pid_player: %d", pid);
         break;
     }
+    if ((icy_name = find_header("icy-name: ")))
+        growl_notification(GROWL_NOTIFICATION_TUNE_IN, "netrad", icy_name, 0, 0);
 
     r = 0;
 

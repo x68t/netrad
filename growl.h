@@ -27,7 +27,11 @@
 #ifndef _GROWL_H_
 #define _GROWL_H_
 
+#define GROWL_NOTIFICATION_TUNE_IN "tune in"
+#define GROWL_NOTIFICATION_METADATA_RECEIVED "metadata received"
+#define GROWL_NOTIFICATION_DISCONNECTED "disconnected"
+
 int growl_init(const char *node, const char *service, int socktype);
-int growl_notification(const char *title, const char *description, int priority, int sticky);
+int growl_notification(const char *notification_name, const char *title, const char *description, int priority, int sticky);
 
 #endif /* _GROWL_H_ */
