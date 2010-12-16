@@ -184,10 +184,23 @@ int growl_init(const char *node, const char *service, int socktype)
     return 0;
 }
 
+static void sanitize(char *s)
+{
+    int i;
+    unsigned char *us;
+
+    us = (unsigned char *)s;
+    for (i = 0; us[i]; i++) {
+        if (!isprint(us[i]))
+            us[i] = ' ';
+    }
+}
+
 int growl_notification(const char *notification_name, const char *title, const char *description, int priority, int sticky)
 {
     int n;
     int16_t flags;
+    char *copyed_title, *copyed_description;
     struct growl_notification_packet packet;
     MD5_CTX ctx;
     struct iovec iov[10];
@@ -195,6 +208,17 @@ int growl_notification(const char *notification_name, const char *title, const c
 
     if (sd < 0)
         return -1;
+
+    copyed_title = copyed_description = NULL;
+    if (!(copyed_title = strdup(title)) ||
+        !(copyed_description = strdup(description)))
+    {
+        if (copyed_title)
+            free(copyed_title);
+        return -1;
+    }
+    sanitize(copyed_title);
+    sanitize(copyed_description);
 
     flags = (priority & 7) * 2;
     if (priority < 0)
@@ -206,19 +230,24 @@ int growl_notification(const char *notification_name, const char *title, const c
     packet.type = GROWL_TYPE_NOTIFICATION;
     packet.flags = htons(flags);
     packet.notification_length = htons(strlen(notification_name));
-    packet.title_length = htons(strlen(title));
-    packet.description_length = htons(strlen(description));
+    packet.title_length = htons(strlen(copyed_title));
+    packet.description_length = htons(strlen(copyed_description));
     packet.app_name_length = htons(strlen(APP_NAME));
 
     n = 0;
     MD5_Init(&ctx);
     add_packet(&iov[n++], &packet, sizeof(packet), &ctx);
     add_packet(&iov[n++], notification_name, strlen(notification_name), &ctx);
-    add_packet(&iov[n++], title, strlen(title), &ctx);
-    add_packet(&iov[n++], description, strlen(description), &ctx);
+    add_packet(&iov[n++], copyed_title, strlen(copyed_title), &ctx);
+    add_packet(&iov[n++], copyed_description, strlen(copyed_description), &ctx);
     add_packet(&iov[n++], APP_NAME, strlen(APP_NAME), &ctx);
     MD5_Final(md5, &ctx);
     add_packet(&iov[n++], md5, sizeof(md5), NULL);
 
-    return writev(sd, iov, n) < 0? -1: 0;
+    n = writev(sd, iov, n) < 0? -1: 0;
+
+    free(copyed_title);
+    free(copyed_description);
+
+    return n;
 }
