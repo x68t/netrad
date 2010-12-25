@@ -156,24 +156,23 @@ static int ev_metadata_receive(int fd, void *ctx)
     char *p;
     char buf[4097];
 
-    if (icy_meta) {
-        free(icy_meta);
-        icy_meta = NULL;
-    }
-
     if ((n = read(fd, buf , sizeof(buf)-1)) <= 0) {
         event_fd_del(fd);
         close(fd);
         return 0;
     }
     buf[n] = '\0';
-
     if (*buf == '\0')
         return -1;
 
+    if (icy_meta) {
+        if (strequal(buf, icy_meta))
+            return 0;
+        free(icy_meta);
+    }
+
     if ((icy_meta = strdup(buf)) == NULL)
         return -1;
-
     if (!(title = find_header("icy-name: ")))
         title = "netrad";
     if (strnequal(buf, "StreamTitle='", 13)) {
