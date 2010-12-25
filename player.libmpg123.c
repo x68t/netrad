@@ -8,7 +8,6 @@
 
 #include <unistd.h>
 #include <stdio.h>
-#include <linux/soundcard.h>
 #include <sys/ioctl.h>
 #include <string.h>
 #include <stdio.h>
@@ -18,19 +17,19 @@
 #include <getopt.h>
 #include <errno.h>
 #include <err.h>
+#include <ao/ao.h>
 #include "mpg123.h"
 #include "meta.h"
 #include "logger.h"
-#include "sndcard.h"
 
 #define STREAM_IN 0
 #define META_OUT 1
 #define PCM_BUFSIZ (1152*2*2*8)
 
 const char *device_name;
-int fd_audio = -1;
+ao_device *device;
 int fs, ch;
-ssize_t (*audio_write)(int fd, const void *p, size_t size);
+int (*audio_write)(ao_device *device, char *p, uint_32 size);
 
 int swrite(int fd, const char *s)
 {
@@ -49,33 +48,28 @@ void usage()
 
 int audio_open(const char *dev)
 {
-    if (!dev)
-        dev = "/dev/dsp";
-
-    if ((fd_audio = sndcard_dsp_open(dev, O_WRONLY)) < 0) {
-        logger(LOG_ERR, "open: %s: %m", dev);
-        return -1;
-    }
-
     return 0;
 }
 
 int audio_init(int rate, int channels, int encoding)
 {
-    const int fmt = AFMT_S16_NE;
+    ao_sample_format format;
 
     if (encoding != MPG123_ENC_SIGNED_16) {
         logger(LOG_ERR, "audio_init: invalid encoding: %d", encoding);
         return -1;
     }
 
-    if (ioctl(fd_audio, SNDCTL_DSP_SPEED, &rate) < 0 ||
-        ioctl(fd_audio, SNDCTL_DSP_CHANNELS, &channels) < 0 ||
-        ioctl(fd_audio, SNDCTL_DSP_SETFMT, &fmt) < 0)
-    {
-        logger(LOG_ERR, "ioctl: %m");
+    memset(&format, 0, sizeof(format));
+    format.bits = 16;
+    format.channels = channels;
+    format.rate = rate;
+    format.byte_format = AO_FMT_LITTLE;
+    if (!(device = ao_open_live(ao_default_driver_id(), &format, NULL))) {
+        logger(LOG_ERR, "ao_open_live: %dHz, %dch", rate, channels);
         return -1;
     }
+
     logger(LOG_INFO, "audio_init: %dHz, %dch", rate, channels);
     fs = rate;
     ch = channels;
@@ -85,11 +79,11 @@ int audio_init(int rate, int channels, int encoding)
 
 void audio_close()
 {
-    if (fd_audio < 0)
+    if (!device)
         return;
 
-    close(fd_audio);
-    fd_audio = -1;
+    ao_close(device);
+    device = NULL;
 }
 
 void sighup(int signo)
@@ -139,7 +133,7 @@ void amplitude(const void *p, size_t size, float gain)
         q[i] *= gain;
 }
 
-ssize_t mute_write(int fd, const void *p, size_t size)
+int mute_write(ao_device *device, char *p, uint_32 size)
 {
     float gain;
     static size_t nbyte = 0;
@@ -150,9 +144,9 @@ ssize_t mute_write(int fd, const void *p, size_t size)
     if (gain < 1)
         amplitude(p, size, gain);
     else
-        audio_write = write;
+        audio_write = ao_play;
 
-    return write(fd, p, size);
+    return ao_play(device, p, size);
 }
 
 int player(int fd_stream, int fd_meta)
@@ -231,7 +225,7 @@ int player(int fd_stream, int fd_meta)
                     return 1;
                 }
             }
-            if (audio_write(fd_audio, pcm, pcm_size) != pcm_size) {
+            if (audio_write(device, (char *)pcm, pcm_size) != 1) {
                 logger(LOG_ERR, "write: PCM: %m");
                 return 1;
             }
@@ -273,6 +267,7 @@ int main(int argc, char *argv[])
 
     options(argc, argv);
 
+    ao_initialize();
     if (audio_open(device_name) < 0) {
         logger(LOG_ERR, "audio_init: %m");
         return 1;
@@ -280,6 +275,7 @@ int main(int argc, char *argv[])
 
     r = player(STREAM_IN, META_OUT);
     audio_close();
+    ao_shutdown();
 
     return r < 0? 1: 0;
 }
