@@ -17,7 +17,7 @@ player.libogg: player.libogg.o
 	${CC} ${CFLAGS} -o $@ player.libogg.o -lvorbisfile
 
 player.raw: player.raw.o sndcard.o
-	${CC} ${CFLAGS} -o $@ player.raw.o logger.o sndcard.o -lasound
+	${CC} ${CFLAGS} -o $@ player.raw.o logger.o -lao
 
 player.libmad: player.libmad.o
 	${CC} ${CFLAGS} -o $@ player.libmad.o -lmad
