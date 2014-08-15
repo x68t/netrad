@@ -37,7 +37,10 @@
 #include "audio.h"
 #include "client.h"
 #include "logger.h"
-#include "growl.h"
+
+#define DEFAULT_USER "netrad"
+#define DEFAULT_GROUP "audio"
+#define DEFAULT_PID_FILE "/var/run/netrad.pid"
 
 void usage()
 {
@@ -86,6 +89,14 @@ int daemonize(const char *user, const char *group, const char *pid_file, const c
     uid = 0;
     gid = 0;
 
+    fp = NULL;
+    if (pid_file) {
+        if ((fp = fopen(pid_file, "w")) == NULL) {
+            logger(LOG_ERR, "fopen: %s: %m", pid_file);
+            return -1;
+        }
+    }
+
     if (user) {
         if (getpwnam_r(user, &pwdbuf, buf, sizeof(buf), &pwd) == 0)
             uid = pwd->pw_uid;
@@ -121,11 +132,7 @@ int daemonize(const char *user, const char *group, const char *pid_file, const c
         return -1;
     }
 
-    if (pid_file) {
-        if ((fp = fopen(pid_file, "w")) == NULL) {
-            logger(LOG_ERR, "fopen: %s: %m", pid_file);
-            return -1;
-        }
+    if (fp) {
         fprintf(fp, "%d\n", getpid());
         fclose(fp);
     }
@@ -161,7 +168,6 @@ int main(int argc, char *argv[])
     int client_init_done;
     char *node, *service;
     const char *user, *group, *pid_file, *cwd;
-    const char *growl;
 
     logger_init("netrad", LOG_ERR);
     logger(LOG_ERR, "start");
@@ -175,7 +181,10 @@ int main(int argc, char *argv[])
 
     debug = 0;
     client_init_done = 0;
-    user = group = pid_file = cwd = growl = NULL;
+    user = DEFAULT_USER;
+    group = DEFAULT_GROUP;
+    pid_file = DEFAULT_PID_FILE;
+    cwd = NULL;
     while ((c = getopt(argc, argv, "a:du:g:l:p:c:D:G:")) != -1) {
         switch (c) {
           case 'a':
@@ -208,17 +217,11 @@ int main(int argc, char *argv[])
           case 'D':
             audio_device_name = optarg;
             break;
-          case 'G':
-            growl = optarg;
-            break;
           default:
             usage();
             /* NOTREACHED */
         }
     }
-
-    if (growl)
-        growl_init(growl, NULL, SOCK_DGRAM);
 
     if (event_sigaction_add(SIGHUP, NULL, NULL) < 0 ||
         event_sigaction_add(SIGINT, NULL, NULL) < 0 ||

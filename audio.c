@@ -37,7 +37,6 @@
 #include "audio.h"
 #include "event.h"
 #include "logger.h"
-#include "growl.h"
 #include "libhhttpp/hhttpp.h"
 
 #define strequal !strcmp
@@ -119,7 +118,6 @@ static int stop(int signo, void *ctx)
         return -1;
 
     event_sigcleanup_del(signo, stop, ctx);
-    growl_notification(GROWL_NOTIFICATION_DISCONNECTED, "netrad", "disconnected", 0, 0);
 
     hhttpp_response_headers_free(headers);
     headers = NULL;
@@ -181,7 +179,6 @@ static int ev_metadata_receive(int fd, void *ctx)
             *p = '\0';
     } else
         description = buf;
-    growl_notification(GROWL_NOTIFICATION_METADATA_RECEIVED, title, description, 0, 0);
 
     logger(LOG_INFO, "ev_metadata_receive: `%s'", icy_meta);
 
@@ -194,7 +191,7 @@ static int start(int signo, void *ctx)
     pid_t pid;
     int fds[2];
     struct audio_ctx *ac;
-    const char *metaint, *icy_name;
+    const char *metaint;
     const char *argv[8];
 
     logger(LOG_INFO, "audio.c:start");
@@ -248,8 +245,6 @@ static int start(int signo, void *ctx)
         logger(LOG_INFO, "pid_player: %d", pid);
         break;
     }
-    if ((icy_name = find_header("icy-name: ")))
-        growl_notification(GROWL_NOTIFICATION_TUNE_IN, "netrad", icy_name, 0, 0);
 
     r = 0;
 

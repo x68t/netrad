@@ -75,9 +75,6 @@ static ssize_t safe_read(int fd, void *buf, size_t bufsize)
 
 static ssize_t meta_len(size_t mp, const char *buf, size_t bufsize)
 {
-    if (mp < 0)
-        return -1;
-
     if (mp < bufsize)
         return (unsigned char)buf[mp] * 16;
 
@@ -153,7 +150,7 @@ static const char *meta_body(size_t mp, const char *buf, size_t bufsize)
 
 static int meta_write(int fd, size_t mp, const char *buf, size_t bufsize)
 {
-    size_t len;
+    ssize_t len;
     const char *body;
 
     if ((len = meta_len(mp, buf, bufsize)) < 0 ||

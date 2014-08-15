@@ -41,14 +41,6 @@
 #define MP3_PLAYER "./player.libmpg123"
 #endif
 
-#ifndef OGG_PLAYER
-#define OGG_PLAYER "./player.libogg"
-#endif
-
-#ifndef NOISE_PLAYER
-#define NOISE_PLAYER "./player.noise"
-#endif
-
 int http_request(int fd, void *ctx)
 {
     struct hhttpp *req;
@@ -69,20 +61,6 @@ static int type_audio_mpeg(int fd, struct hhttpp *req)
     event_fd_del(fd);
 
     return audio_start(fd, req, MP3_PLAYER);
-}
-
-static int type_application_ogg(int fd, struct hhttpp *req)
-{
-    event_fd_del(fd);
-
-    return audio_start(fd, req, OGG_PLAYER);
-}
-
-static int type_audio_x_raw(int fd, struct hhttpp *req)
-{
-    event_fd_del(fd);
-
-    return audio_start(fd, req, RAW_PLAYER);
 }
 
 static char *get_body(struct hhttpp *req)
@@ -264,8 +242,6 @@ int http_receive(int fd, void *ctx)
         int (*fn)(int, struct hhttpp *);
     } types[] = {
         { "audio/mpeg", type_audio_mpeg },
-        { "application/ogg", type_application_ogg },
-        { "audio/x-raw", type_audio_x_raw },
         { "audio/mpegurl", type_audio_mpegurl },
         { "audio/x-mpegurl", type_audio_mpegurl },
         { "audio/x-scpls", type_audio_x_scpls },
@@ -318,7 +294,7 @@ int http_receive(int fd, void *ctx)
     }
 
     event_fd_del(fd);
-    return audio_start(fd, req, NOISE_PLAYER);
+    return -1;
     //diag(req);
 
   bad:

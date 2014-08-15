@@ -1,29 +1,21 @@
+CC = clang
 EVENT_NOTIFIER = epoll
 #EVENT_NOTIFIER = pselect
 
 PREFIX = /usr/local
 LIBEXEC = ${PREFIX}/libexec/netrad
-CFLAGS = -O2 -march=native -Wall -pipe -DMP3_PLAYER='"${LIBEXEC}/player.libmpg123"' -DOGG_PLAYER='"${LIBEXEC}/player.libogg"' -DRAW_PLAYER='"${LIBEXEC}/player.raw"' -DNOISE_PLAYER='"${LIBEXEC}/player.noise"'
+CFLAGS = -O2 -Wall -pipe -DMP3_PLAYER='"${LIBEXEC}/player.libmpg123"'
 
-all: netrad player.libmpg123 player.libogg player.raw player.noise
+TARGETS = netrad player.libmpg123
 
-netrad: netrad.o http.o audio.o event.o cdata.o client.o cmd.o logger.o growl.o libhhttpp/libhhttpp.a
-	${CC} ${CFLAGS} -o $@ netrad.o http.o audio.o event.o cdata.o client.o cmd.o logger.o growl.o -Llibhhttpp -lhhttpp -lssl
+.PHONY: all
+all: ${TARGETS}
+
+netrad: netrad.o http.o audio.o event.o cdata.o client.o cmd.o logger.o libhhttpp/libhhttpp.a
+	${CC} ${CFLAGS} -o $@ netrad.o http.o audio.o event.o cdata.o client.o cmd.o logger.o -Llibhhttpp -lhhttpp
 
 player.libmpg123: player.libmpg123.o meta.o logger.o
 	${CC} ${CFLAGS} -o $@ player.libmpg123.o meta.o logger.o -lmpg123 -lao
-
-player.libogg: player.libogg.o
-	${CC} ${CFLAGS} -o $@ player.libogg.o -lvorbisfile
-
-player.raw: player.raw.o sndcard.o
-	${CC} ${CFLAGS} -o $@ player.raw.o logger.o -lao
-
-player.libmad: player.libmad.o
-	${CC} ${CFLAGS} -o $@ player.libmad.o -lmad
-
-player.noise: player.noise.o
-	${CC} ${CFLAGS} -o $@ player.noise.o
 
 event.o: event.${EVENT_NOTIFIER}.c
 	${CC} ${CFLAGS} -c -o $@  event.${EVENT_NOTIFIER}.c
@@ -31,17 +23,17 @@ event.o: event.${EVENT_NOTIFIER}.c
 libhhttpp/libhhttpp.a:
 	cd libhhttpp && make
 
-
-install:: netrad player.libmpg123 player.libogg
+.PHONY: install start stop clean
+install: netrad player.libmpg123
 	test -d ${PREFIX}/sbin || mkdir -p ${PREFIX}/sbin
 	test -d ${LIBEXEC} || mkdir -p ${LIBEXEC}
-	install -o root -g root netrad ${PREFIX}/sbin
-	install -o root -g root player.libmpg123 player.libogg player.raw player.noise ${LIBEXEC}
+	install -o root -g root -s netrad ${PREFIX}/sbin
+	install -o root -g root -s player.libmpg123 ${LIBEXEC}
 
-start stop::
+start stop:
 	/etc/init.d/netrad $@
 
-clean::
+clean:
 	-rm -f *.o *~ netrad player.libmpg123 player.libogg player.raw player.noise
 	cd libhhttpp && make clean
 

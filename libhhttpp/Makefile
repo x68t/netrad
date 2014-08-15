@@ -1,4 +1,5 @@
-CFLAGS = -O2 -march=native -Wall
+CC = clang
+CFLAGS = -O2 -Wall
 
 SRCS = buffer.c header.c hhttpp.c url.c
 OBJS = $(SRCS:.c=.o)
