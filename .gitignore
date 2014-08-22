@@ -1,5 +1,7 @@
 *.o
 *.a
+*.pyc
 *~
 netrad
 player.libmpg123
+*.sqlite3

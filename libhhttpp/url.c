@@ -28,6 +28,8 @@
 #include <string.h>
 #include "url.h"
 
+#define has_prefix(s, prefix) !strncmp(s, prefix, strlen(prefix))
+
 void hhttpp_url_free(struct hhttpp_url *url)
 {
     if (!url)
@@ -40,22 +42,24 @@ void hhttpp_url_free(struct hhttpp_url *url)
 struct hhttpp_url *hhttpp_url_parse(const char *url_string)
 {
     char *p;
+    const char *host;
     struct hhttpp_url *url;
 
     if (!url_string)
         return NULL;
 
-    if (strncmp(url_string, "http://", 7) ||
-        url_string[7] == '\0')
-    {
+    if (has_prefix(url_string, "http://"))
+        host = url_string + 7;
+    else
+        host = url_string;
+    if (!*host)
         return NULL;
-    }
 
     if ((url = calloc(sizeof(*url), 1)) == NULL)
         return NULL;
-    if ((url->host = strdup(url_string + 7)) == NULL)
-        goto bad;
 
+    if ((url->host = strdup(host)) == NULL)
+        goto bad;
     if ((p = strchr(url->host, '/')) == NULL) {
         // "http://www.example.com"
         url->path = "";
