@@ -1,0 +1,10 @@
+<h1>{{h1}}</h1>
+<ul>
+  <li ng-click='stop()'>stop</li>
+  <li ng-click='reload()'>reload</li>
+  <li><input type='range' min='80' max='100' ng-model='volume'></li>
+  <li ng-repeat='station in stations' ng-click='click($index)'>{{station.name}}</li>
+</ul>
+
+<span>{{volume}}</span><br>
+<div>{{headers['icy-meta']}}</div>
