@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html ng-app='app'>
+  <head>
+    <meta charset='utf-8'>
+    <base href='/netrad/'>
+    <link rel='stylesheet' href='css/bootstrap.min.css'>
+    <link rel='stylesheet' href='index.css'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  </head>
+  <body ng-controller='mainController'>
+
+    <nav class='navbar navbar-default' role='navigation'>
+      <div class='navbar-header'>
+        <button type='button' class='navbar-toggle' data-toggle='collapse' data-target='#bs-example-navbar-collapse-1'>
+          <span class='sr-only'>Toggle navigation</span>
+          <span class='icon-bar'></span>
+          <span class='icon-bar'></span>
+          <span class='icon-bar'></span>
+        </button>
+        <a class='navbar-brand' ui-sref='tune'>netrad</a>
+      </div>
+
+      <div class='collapse navbar-collapse'>
+        <ul class='nav navbar-nav'>
+          <li ui-sref-active='active'>
+            <a ui-sref='tune'><span class='glyphicon glyphicon-music'></span>Tune</a>
+          </li>
+          <li ui-sref-active='active'>
+            <a ui-sref='register'><span class='glyphicon glyphicon-edit'></span>Register</a>
+          </li>
+        </ul>
+        <ul class='nav navbar-nav navbar-right'>
+
+          <li>
+            <form class='navbar-form'>
+              <label>
+                <span class='glyphicon' ng-class='{ "glyphicon-volume-off": volumeStatus.mute, "glyphicon-volume-up": !volumeStatus.mute }'></span>
+                <input type='checkbox' ng-model='volumeStatus.mute'>
+              </label>
+              <input type='range' class='form-control' ng-model='volumeStatus.volume' ng-disabled='volumeStatus.mute'>
+            </form>
+          </li>
+          <li>
+            <form class='navbar-form' role='search'>
+              <input type='text' class='form-control' placeholder='Radio Station' ng-model='q'>
+            </form>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <ui-view></ui-view>
+
+    <script src='angular.js'></script>
+    <script src='angular-resource.js'></script>
+    <script src='angular-ui-router.js'></script>
+    <script src='app.js'></script>
+  </body>
+</html>

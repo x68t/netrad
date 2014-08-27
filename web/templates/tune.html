@@ -1,0 +1,7 @@
+<div class='panel panel-default'>
+  <div class='panel-heading'>Radio Stations</div>
+
+  <button ng-repeat='station in stations | filter:q' class='radio-station btn btn-default btn-lg' ng-click='tune($index)'>
+    {{station.id}}: {{station.name}}: {{station.url}}
+  </button>
+</div>
