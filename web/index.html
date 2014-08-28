@@ -4,7 +4,7 @@
     <meta charset='utf-8'>
     <base href='/netrad/'>
     <link rel='stylesheet' href='css/bootstrap.min.css'>
-    <link rel='stylesheet' href='index.css'>
+    <link rel='stylesheet' href='css/index.css'>
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
   </head>
   <body ng-controller='mainController'>
@@ -30,7 +30,6 @@
           </li>
         </ul>
         <ul class='nav navbar-nav navbar-right'>
-
           <li>
             <form class='navbar-form'>
               <label>
@@ -38,16 +37,24 @@
                 <input type='checkbox' ng-model='volumeStatus.mute'>
               </label>
               <input type='range' class='form-control' ng-model='volumeStatus.volume' ng-disabled='volumeStatus.mute'>
+              <button type='button' class='form-control' ng-click='tuneStop()'>
+                <span class='glyphicon glyphicon-stop'></span>Stop
+              </button>
             </form>
           </li>
           <li>
             <form class='navbar-form' role='search'>
-              <input type='text' class='form-control' placeholder='Radio Station' ng-model='q'>
+              <input type='search' class='form-control' placeholder='Radio Station' ng-model='q'>
             </form>
           </li>
         </ul>
       </div>
     </nav>
+
+    <div class='panel panel-default' ng-click='updateTuneStatus()'>
+      <div class='panel-heading'><span class='glyphicon glyphicon-music'></span>Now Playing</div>
+      <div class='panel-body' ng-bind='tuneStatus.headers["icy-meta"] | title'>Loading...</div>
+    </div>
 
     <ui-view></ui-view>
 
