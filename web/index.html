@@ -52,8 +52,15 @@
     </nav>
 
     <div class='panel panel-default' ng-click='updateTuneStatus()'>
-      <div class='panel-heading'><span class='glyphicon glyphicon-music'></span>Now Playing</div>
+      <div class='panel-heading'><span class='glyphicon glyphicon-music' ng-click='showTuneStatus=!showTuneStatus'></span>Now Playing</div>
       <div class='panel-body' ng-bind='tuneStatus.headers["icy-meta"] | title'>Loading...</div>
+      <table class='table'>
+        <tbody>
+          <tr ng-repeat='(k,v) in tuneStatus.headers' ng-show='showTuneStatus'>
+            <td ng-bind='k'></td><td ng-bind='v'></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <ui-view></ui-view>
