@@ -15,7 +15,10 @@
 </div>
 
 <div class='panel panel-default'>
-  <div class='panel-heading'><i class='glyphicon' ng-class='{"glyphicon-plus-sign": newStation.id===undefined, "glyphicon-edit": newStation.id !== undefined}'></i>{{newStation.id===undefined? 'New': 'Edit'}} Radio Station</div>
+  <div class='panel-heading'>
+    <i class='glyphicon' ng-class='{"glyphicon-plus-sign": newStation.id===undefined, "glyphicon-edit": newStation.id!==undefined}'></i>
+    {{newStation.id===undefined? 'New': 'Edit'}} Radio Station
+  </div>
   <div class='panel-body'>
     <form class='form-horizontal' name='newStation'>
       <div class='form-group'>
@@ -50,9 +53,18 @@
       <div class='form-group'>
         <div class='col-sm-offset-1 col-sm-10'>
           <!-- <button type='submit' class='btn btn-default' ng-click='update()'>Update</button> -->
-          <button type='submit' class='btn btn-default' ng-click='play()' ng-disabled='newStation.url===undefined || newStation.url===""'><i class='glyphicon glyphicon-play'></i>Play</button>
-          <button type='submit' class='btn btn-default' ng-click='register()'><i class='glyphicon' ng-class='{"glyphicon-plus-sign": newStation.id===undefined, "glyphicon-edit": newStation.id !== undefined}'></i>{{newStation.id===undefined? 'Register': 'Update'}}</button>
-          <button type='submit' class='btn btn-default' ng-click='remove()' ng-show='newStation.id!==undefined'><i class='glyphicon glyphicon-remove-sign'></i>Remove</button>
+          <button type='submit' class='btn btn-default' ng-click='play()' ng-disabled='!newStation.url'>
+            <i class='glyphicon glyphicon-play'></i>
+            Play
+          </button>
+          <button type='submit' class='btn btn-default' ng-click='register()' ng-disabled='!newStation.url'>
+            <i class='glyphicon' ng-class='{"glyphicon-plus-sign": newStation.id===undefined, "glyphicon-edit": newStation.id!==undefined}'></i>
+            {{newStation.id===undefined? 'Register': 'Update'}}
+          </button>
+          <button type='submit' class='btn btn-default' ng-click='remove()' ng-show='newStation.id!==undefined'>
+            <i class='glyphicon glyphicon-remove-sign'></i>
+            Remove
+          </button>
         </div>
       </div>
     </form>
