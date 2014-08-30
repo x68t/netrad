@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import alsaaudio
+import math
 
 
 def getMixer():
@@ -8,11 +9,11 @@ def getMixer():
 
 
 def getVolume():
-    return getMixer().getvolume()[0]
+    return math.pow(getMixer().getvolume()[0] / 100.0, 10)
 
 
 def setVolume(volume):
-    getMixer().setvolume(int(volume))
+    getMixer().setvolume(int(math.pow(float(volume), 1.0/10) * 100))
 
 
 def getMute():

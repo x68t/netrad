@@ -36,7 +36,7 @@
                 <span class='glyphicon' ng-class='{ "glyphicon-volume-off": volumeStatus.mute, "glyphicon-volume-up": !volumeStatus.mute }'></span>
                 <input type='checkbox' ng-model='volumeStatus.mute'>
               </label>
-              <input type='range' class='form-control' ng-model='volumeStatus.volume' ng-disabled='volumeStatus.mute'>
+              <input type='range' class='form-control' ng-model='volumeStatus.volume' ng-disabled='volumeStatus.mute' min='0' max='1' step='0.01'>
               <button type='button' class='form-control' ng-click='tuneStop()'>
                 <span class='glyphicon glyphicon-stop'></span>Stop
               </button>
