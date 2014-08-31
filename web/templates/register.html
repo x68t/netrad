@@ -1,5 +1,7 @@
 <div class='panel panel-default'>
-  <div class='panel-heading'><i class='glyphicon glyphicon-edit'></i>Radio Stations</div>
+  <div class='panel-heading'>
+    <i class='glyphicon glyphicon-edit'></i>
+    Radio Stations</div>
   <table class='table'>
     <thead>
       <tr>
@@ -16,33 +18,33 @@
 
 <div class='panel panel-default'>
   <div class='panel-heading'>
-    <i class='glyphicon' ng-class='{"glyphicon-plus-sign": newStation.id===undefined, "glyphicon-edit": newStation.id!==undefined}'></i>
-    {{newStation.id===undefined? 'New': 'Edit'}} Radio Station
+    <i class='glyphicon' ng-class='editIconClass()'></i>
+    {{isNew()? 'New': 'Edit'}} Radio Station
   </div>
   <div class='panel-body'>
     <form class='form-horizontal' name='newStation'>
       <div class='form-group'>
         <label for='site' class='col-sm-1 control-label'>Site</label>
-        <div class='col-sm-3'>
+        <div class='col-sm-5'>
           <input type='text' class='form-control' id='site' ng-model='newStation.site'>
         </div>
       </div>
       <div class='form-group'>
         <label for='program' class='col-sm-1 control-label'>Program</label>
-        <div class='col-sm-3'>
+        <div class='col-sm-5'>
           <input type='text' class='form-control' id='program' ng-model='newStation.program'>
         </div>
       </div>
       <div class='form-group'>
         <label for='genre' class='col-sm-1 control-label'>Genre</label>
-        <div class='col-sm-3'>
+        <div class='col-sm-5'>
           <input type='text' class='form-control' id='genre' ng-model='newStation.genre'>
         </div>
       </div>
       <div class='form-group'>
         <label for='url' class='col-sm-1 control-label'>URL</label>
         <div class='col-sm-10'>
-          <input type='text' class='form-control' id='url' ng-model='newStation.url' ng-disabled='newStation.id!==undefined'>
+          <input type='text' class='form-control' id='url' ng-model='newStation.url' ng-disabled='!isNew()'>
         </div>
       </div>
       <div class='form-group'>
@@ -58,10 +60,10 @@
             Play
           </button>
           <button type='submit' class='btn btn-default' ng-click='register()' ng-disabled='!newStation.url'>
-            <i class='glyphicon' ng-class='{"glyphicon-plus-sign": newStation.id===undefined, "glyphicon-edit": newStation.id!==undefined}'></i>
-            {{newStation.id===undefined? 'Register': 'Update'}}
+            <i class='glyphicon' ng-class='editIconClass()'></i>
+            {{isNew()? 'Register': 'Update'}}
           </button>
-          <button type='submit' class='btn btn-default' ng-click='remove()' ng-show='newStation.id!==undefined'>
+          <button type='submit' class='btn btn-default' ng-click='remove()' ng-show='!isNew()'>
             <i class='glyphicon glyphicon-remove-sign'></i>
             Remove
           </button>

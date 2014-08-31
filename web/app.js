@@ -152,6 +152,15 @@
             stationService.remove($scope.newStation);
             $scope.stations = stationService.query();
         };
+        $scope.isNew = function() {
+            return $scope.newStation.id === undefined;
+        };
+        $scope.editIconClass = function() {
+            return {
+                "glyphicon-plus-sign": $scope.isNew(),
+                "glyphicon-edit": !$scope.isNew()
+            };
+        };
     });
 
     app.filter('title', function() {
